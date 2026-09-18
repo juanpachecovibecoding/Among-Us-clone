@@ -12,8 +12,9 @@ pg.mixer.init()
 class MenuCursor(Drawable, pg.sprite.Sprite):
 
     def __init__(self, game, x, y, width=20, height=20):
-        super(MenuCursor, self).__init__(width, height, x, y)
         pg.sprite.Sprite.__init__(self)
+        super(MenuCursor, self).__init__(width, height, x, y)
+        self.rect = self.surface.get_rect(x=x, y=y)
         self.image = self.surface
         self.game = game
         self.width = width
