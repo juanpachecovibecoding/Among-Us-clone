@@ -10,7 +10,7 @@ class Board:
 
     def __init__(self, width: int, height: int, game):
         self.surface = pg.display.set_mode((width, height), 0, 32)
-        pg.display.set_caption('Among Us')
+        pg.display.set_caption('PROJECT: AIRGAP')
         self.width = width
         self.height = height
         self.game = game
@@ -174,21 +174,21 @@ class Board:
     def draw_bots_left(self, left: int, text_size):
         self.bots_left_font = pg.font.Font(FONT, text_size)
         if self.game.gamemode == "Freeplay":
-            self.draw_text(self.surface, "Bots Alive: {}".format(left), 60, 25, self.bots_left_font)
+            self.draw_text(self.surface, "Agents Online: {}".format(left), 60, 25, self.bots_left_font)
         elif self.game.gamemode == "Multiplayer":
-            self.draw_text(self.surface, "PLYR Alive: {}".format(left), 60 , 25, self.bots_left_font)
+            self.draw_text(self.surface, "Researchers Online: {}".format(left), 60, 25, self.bots_left_font)
 
     def draw_player_name(self, player_name, text_color, text_size):
         self.player_name_font = pg.font.Font(FONT, text_size)
-        text_surface = self.player_name_font.render(player_name + " - Imposter", True, text_color)
-        text_surface2 = self.player_name_font.render(player_name+ " - Crewmate", True, text_color)
+        text_surface  = self.player_name_font.render(player_name + " [SABOTEUR]",   True, text_color)
+        text_surface2 = self.player_name_font.render(player_name + " [RESEARCHER]", True, text_color)
         if self.game.player.imposter:
             return text_surface
         else:
             return text_surface2
 
     def draw_ejected_text(self, p):
-        self.draw_text(self.surface, p + " was ejected", self.width/2, self.height/2, self.bonus_font)
+        self.draw_text(self.surface, p + " — access credentials REVOKED", self.width/2, self.height/2, self.bonus_font)
 
     def draw_light_timer_text(self, left: int, text_color, text_size):
         timer_font = pg.font.Font(FONT, text_size)
@@ -207,12 +207,12 @@ class Board:
 
     def draw_reactor_timer_text(self, left: int, text_color, text_size):
         timer_font = pg.font.Font(FONT, text_size)
-        text_surface = timer_font.render("Reactor Meltdown in: {} ".format(left) + " secs", True, text_color)
+        text_surface = timer_font.render("⚠ CONTAINMENT BREACH in: {} secs".format(left), True, text_color)
         return text_surface
 
     def draw_meeting_timer_text(self, left: int, text_color, text_size):
         timer_font = pg.font.Font(FONT, text_size)
-        text_surface = timer_font.render("Voting Ends in: {} ".format(left), True, text_color)
+        text_surface = timer_font.render("Debrief ends in: {} ".format(left), True, text_color)
         return text_surface
 
     @staticmethod

@@ -857,7 +857,8 @@ class Game:
     # THIS METHOD DRAWS EMERGENCY FLASH MESSAGE ON SCREEN
     """ VOTE """
     def display_meeting_alert(self):
-        self.screen.blit(eval(self.emergency_img_sync), (0, 0))
+        if self.emergency_img_sync:
+            self.screen.blit(self._resolve_image(self.emergency_img_sync), (0, 0))
 
     # More Task displays
     def display_open_cafe_comp_window(self):
@@ -909,7 +910,8 @@ class Game:
         self.screen.blit(self.power_diverted_to_reactor_window_img, (WIDTH / 3 - 5, 108))
 
     def display_meeting_alert_report(self):
-        self.screen.blit(eval(self.emergency_img_sync_report), (0, 0))
+        if self.emergency_img_sync_report:
+            self.screen.blit(self._resolve_image(self.emergency_img_sync_report), (0, 0))
 
     def display_align_engine_output_window(self):
         self.screen.blit(self.align_engine_output_window_img, (WIDTH / 3 - 45, 70))
@@ -994,6 +996,18 @@ class Game:
             "orange_player_imgs_right[9]": orange_player_imgs_right[9],
             "yellow_player_imgs_right[9]": yellow_player_imgs_right[9],
             "green_player_imgs_right[9]":  green_player_imgs_right[9],
+            # Emergency meeting alert images (shown on meeting call)
+            "red_player_emergency_meeting":           red_player_emergency_meeting,
+            "blue_player_emergency_meeting":          blue_player_emergency_meeting,
+            "orange_player_emergency_meeting":        orange_player_emergency_meeting,
+            "yellow_player_emergency_meeting":        yellow_player_emergency_meeting,
+            "green_player_emergency_meeting":         green_player_emergency_meeting,
+            # Report dead-body alert images
+            "red_player_emergency_meeting_report":    red_player_emergency_meeting_report,
+            "blue_player_emergency_meeting_report":   blue_player_emergency_meeting_report,
+            "orange_player_emergency_meeting_report": orange_player_emergency_meeting_report,
+            "yellow_player_emergency_meeting_report": yellow_player_emergency_meeting_report,
+            "green_player_emergency_meeting_report":  green_player_emergency_meeting_report,
             # Dead / ghost / invisible images used in network sync
             "self.Players[p[0]].image_dead": self.invsible_player_image,
             "self.invsible_player_image":    self.invsible_player_image,
@@ -3227,10 +3241,10 @@ class Game:
         taskbar_font = pg.font.Font(FONT, 14)
         if missions_done >= 5:
             # if mission completed is 4 or greater than 4 then font color is Black
-            text_surface = taskbar_font.render("Total Tasks Completed", True, BLACK)
+            text_surface = taskbar_font.render("Containment Level", True, BLACK)
         else:
             # if mission completed is less than 4 then font color is White
-            text_surface = taskbar_font.render("Total Tasks Completed", True, WHITE)
+            text_surface = taskbar_font.render("Containment Level", True, WHITE)
         self.screen.blit(text_surface, (90, 17))
 
         # 4th parameter is the thickness of border of rectangle
