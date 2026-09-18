@@ -20,8 +20,49 @@ from pygame.locals import *
 import pickle
 import select
 import socket
+import struct
 
 BUFFERSIZE = 8192
+
+
+# ---------------------------------------------------------------------------
+# TCP framing helpers — match server.py protocol
+# Every message: [4-byte big-endian length][payload]
+# ---------------------------------------------------------------------------
+
+def _send_msg(sock, data):
+    """Send a length-prefixed message (blocking)."""
+    msg = struct.pack('>I', len(data)) + data
+    try:
+        sock.sendall(msg)
+        return True
+    except Exception:
+        return False
+
+
+def _recv_exact(sock, n):
+    """Read exactly n bytes, blocking. Returns None on disconnect/error."""
+    buf = b''
+    while len(buf) < n:
+        try:
+            chunk = sock.recv(n - len(buf))
+        except Exception:
+            return None
+        if not chunk:
+            return None
+        buf += chunk
+    return buf
+
+
+def _recv_msg(sock):
+    """Receive one length-prefixed message. Returns bytes or None."""
+    header = _recv_exact(sock, 4)
+    if header is None:
+        return None
+    length = struct.unpack('>I', header)[0]
+    if length == 0 or length > 1_000_000:
+        return None
+    return _recv_exact(sock, length)
 
 
 class Game:
@@ -349,34 +390,34 @@ class Game:
         self.light_bulb_icon_dim = pg.image.load("Assets/Images/UI/light_bulb_icon_dim.png").convert_alpha()
         self.light_bulb_icon_dim = pg.transform.smoothscale(self.light_bulb_icon_dim, (75, 90)).convert_alpha()
 
-        self.invsible_player_image = pg.image.load("Assets\Images\Player\invisble3.png").convert_alpha()
+        self.invsible_player_image = pg.image.load("Assets/Images/Player/invisble3.png").convert_alpha()
         self.invsible_player_image = pygame.transform.scale(self.invsible_player_image, (64, 86)).convert_alpha()
-        self.imposter_among_us_img = pygame.image.load('Assets\Images\Menu\imposteramongus.png').convert_alpha()
+        self.imposter_among_us_img = pygame.image.load('Assets/Images/Menu/imposteramongus.png').convert_alpha()
         self.kill_victim_anim_img = []
         for i in range(1, 19):
             self.kill_victim_anim_img.append(pygame.image.load('Assets/Images/Alerts/' + 'kill' + str(i) + '.png').convert_alpha())
         self.cafe_comp_img = pygame.image.load(
-            'Assets\Images\Tasks\Become Imposter\cafe_computer_base.png').convert_alpha()
-        self.cafe_comp_check_img = pygame.image.load('Assets\Images\Tasks\Become Imposter\check.png').convert_alpha()
-        self.chat_img = pygame.image.load('Assets\Images\Meeting\chat.png').convert_alpha()
-        self.vote_img = pygame.image.load('Assets\Images\Meeting\e_vote_base.png').convert_alpha()
-        self.vote_tick_img = pygame.image.load('Assets\Images\Meeting\select_vote.png').convert_alpha()
-        self.chat_img_dead = pygame.image.load('Assets\Images\Meeting\chat_dead.png').convert_alpha()
-        self.vote_img_dead = pygame.image.load('Assets\Images\Meeting\e_vote_base_dead.png').convert_alpha()
-        self.eject_screen_img = pygame.image.load('Assets\Images\Alerts\eject.png').convert_alpha()
+            'Assets/Images/Tasks/Become Imposter/cafe_computer_base.png').convert_alpha()
+        self.cafe_comp_check_img = pygame.image.load('Assets/Images/Tasks/Become Imposter/check.png').convert_alpha()
+        self.chat_img = pygame.image.load('Assets/Images/Meeting/chat.png').convert_alpha()
+        self.vote_img = pygame.image.load('Assets/Images/Meeting/e_vote_base.png').convert_alpha()
+        self.vote_tick_img = pygame.image.load('Assets/Images/Meeting/select_vote.png').convert_alpha()
+        self.chat_img_dead = pygame.image.load('Assets/Images/Meeting/chat_dead.png').convert_alpha()
+        self.vote_img_dead = pygame.image.load('Assets/Images/Meeting/e_vote_base_dead.png').convert_alpha()
+        self.eject_screen_img = pygame.image.load('Assets/Images/Alerts/eject.png').convert_alpha()
         self.navigation_screen_img = pygame.image.load(
-            'Assets\Images\Tasks\Stabilize Steering\stabilizer_base.png').convert_alpha()
+            'Assets/Images/Tasks/Stabilize Steering/stabilizer_base.png').convert_alpha()
         self.full_garbage_screen_img = pygame.image.load(
-            'Assets\Images\Tasks\Empty Garbage\garbage_base_full.png').convert_alpha()
+            'Assets/Images/Tasks/Empty Garbage/garbage_base_full.png').convert_alpha()
         self.empty_garbage_screen_img = pygame.image.load(
-            'Assets\Images\Tasks\Empty Garbage\garbage_base_empty.png').convert_alpha()
+            'Assets/Images/Tasks/Empty Garbage/garbage_base_empty.png').convert_alpha()
         self.reboot_wifi_screen_img = pygame.image.load(
-            'Assets\Images\Tasks\Reboot Wifi\panel_wifi_bg.png').convert_alpha()
-        self.wifi_on_img = pygame.image.load('Assets\Images\Tasks\Reboot Wifi\wifi_on.png').convert_alpha()
+            'Assets/Images/Tasks/Reboot Wifi/panel_wifi_bg.png').convert_alpha()
+        self.wifi_on_img = pygame.image.load('Assets/Images/Tasks/Reboot Wifi/wifi_on.png').convert_alpha()
         self.wifi_liver_down_img = pygame.image.load(
-            'Assets\Images\Tasks\Reboot Wifi\panel_wifi-lever.png').convert_alpha()
+            'Assets/Images/Tasks/Reboot Wifi/panel_wifi-lever.png').convert_alpha()
         self.electricity_wire_img = pygame.image.load(
-            'Assets\Images\Tasks\Fix Wiring\electricity_wire_base1.png').convert_alpha()
+            'Assets/Images/Tasks/Fix Wiring/electricity_wire_base1.png').convert_alpha()
         self.electricity_wire_red_img = pygame.image.load('Assets/Images/Tasks/Fix Wiring/red_wire.png').convert_alpha()
         self.electricity_wire_blue_img = pygame.image.load(
             'Assets/Images/Tasks/Fix Wiring/blue_wire.png').convert_alpha()
@@ -941,10 +982,28 @@ class Game:
     def display_kill_victim_anim(self):
         self.screen.blit(self.kill_victim_anim_img[self.kill_victim_anim_index], (0, 0))
 
+    def _resolve_image(self, key):
+        """Safe replacement for eval() — looks up a sprite image by its string key.
+        This eliminates the Remote Code Execution vulnerability from using eval()
+        on network-received data.
+        """
+        lookup = {
+            # Player eject images (right-facing frame 9 = ejection pose)
+            "red_player_imgs_right[9]":    red_player_imgs_right[9],
+            "blue_player_imgs_right[9]":   blue_player_imgs_right[9],
+            "orange_player_imgs_right[9]": orange_player_imgs_right[9],
+            "yellow_player_imgs_right[9]": yellow_player_imgs_right[9],
+            "green_player_imgs_right[9]":  green_player_imgs_right[9],
+            # Dead / ghost / invisible images used in network sync
+            "self.Players[p[0]].image_dead": self.invsible_player_image,
+            "self.invsible_player_image":    self.invsible_player_image,
+        }
+        return lookup.get(key, self.invsible_player_image)
+
     def display_eject_alert(self, x):
         self.screen.blit(self.eject_screen_img, (0, 0))
         self.board.draw_ejected_text(self.eject_colour)
-        self.screen.blit(eval(self.eject_img), (x, HEIGHT / 3))
+        self.screen.blit(self._resolve_image(self.eject_img), (x, HEIGHT / 3))
 
     def draw_health(self):
         self.name_block = pg.Surface((20, 7))
@@ -1118,16 +1177,20 @@ class Game:
             # update player tasks count for server
             self.player.tasks_completed = self.missions_done
 
-            # server shit
+            # Receive server data using framed protocol (matches server.py send_msg)
+            # Non-blocking check: only read if data is available
             ins, outs, ex = select.select([s], [], [], 0)
             for inm in ins:
-                # receiving data from server and storing in gameEvent
-                # gameEvent = pickle.loads(inm.recv(BUFFERSIZE))
                 try:
-                    gameEvent = pickle.loads(inm.recv(BUFFERSIZE))
-                except Exception:
-                    print("yes exception")
-
+                    raw = _recv_msg(inm)
+                    if raw is None:
+                        print("server disconnected")
+                        self.playing = False
+                        break
+                    gameEvent = pickle.loads(raw)
+                except Exception as e:
+                    print(f"recv error: {e}")
+                    continue
                 # if event is such that it contains below string
                 if gameEvent[0] == 'id update':
                     # generate player id
@@ -1169,7 +1232,7 @@ class Game:
                             self.Players[p[0]].alive_status = p[3]
                             self.Players[p[0]].sync_img = p[4]
                             self.Players[p[0]].sync_img_index = p[5]
-                            self.Players[p[0]].image = eval(p[4] + p[5])
+                            self.Players[p[0]].image = self._resolve_image(p[4] + p[5])
                             self.Players[p[0]].left_img_index = p[6]
                             self.Players[p[0]].right_img_index = p[7]
                             self.Players[p[0]].up_img_index = p[8]
@@ -1354,7 +1417,7 @@ class Game:
                             if self.player.got_votes >= 2 and self.player.alive_status == True and (
                                     self.emerg_meeting_report_status == 1 or self.emerg_meeting_button_status == 1) and self.emergency == True:
                                 self.player.alive_status = False
-                                self.player.got_reported == True
+                                self.player.got_reported = True  # fixed: was == (comparison) instead of = (assignment)
                                 self.player.image = self.invsible_player_image
                                 self.eject_colour = self.player.player_colour
                                 self.eject = True
@@ -1396,13 +1459,11 @@ class Game:
                       0, self.player.imposter, self.emergency_sync, None, 0, None, self.emergency_img_sync_report, 0,
                       self.player.got_reported, self.eject_sync, self.eject_img]
 
-            # Add try exception block here
-            #s.send(pickle.dumps(ge))
-
+            # Send local player state to server using framed protocol
             try:
-               s.send(pickle.dumps(ge))
-            except Exception:
-               print("very exception")
+                _send_msg(s, pickle.dumps(ge))
+            except Exception as e:
+                print(f"send error: {e}")
 
             # check for game end condition
             if len(self.Players) > 1:
