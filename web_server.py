@@ -189,7 +189,10 @@ HTML_CLIENT = """<!DOCTYPE html>
             height: auto;
             aspect-ratio: 1280 / 640;
             object-fit: contain;
-            cursor: pointer;
+            cursor: default;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-user-drag: none;
         }
         /* Controls Overlay */
         .controls-bar {
@@ -210,7 +213,10 @@ HTML_CLIENT = """<!DOCTYPE html>
             border-radius: 8px;
             font-size: 14px;
             font-weight: 700;
-            cursor: pointer;
+            cursor: default;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-user-drag: none;
             transition: all 0.1s ease;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         }
@@ -256,7 +262,7 @@ HTML_CLIENT = """<!DOCTYPE html>
     </header>
 
     <div id="game-container">
-        <img id="viewport" src="/stream" alt="PROJECT AIRGAP Feed" tabindex="0">
+        <img id="viewport" src="/stream" alt="PROJECT AIRGAP Feed" tabindex="0" draggable="false">
     </div>
 
     <div class="shortcuts-hint">
@@ -270,6 +276,10 @@ HTML_CLIENT = """<!DOCTYPE html>
         <span class="badge">TAB</span> Mapa
     </div>
 
+    <div style="display:flex; gap:12px; justify-content:center; margin: 12px 0;">
+        <button class="btn btn-cyan" style="background: #059669; font-size:15px; border-color:#34d399;" onclick="quickPlay()">?? ENTRAR A PARTIDA (FREEPLAY)</button>
+        <button class="btn btn-orange" onclick="quickOnline()">?? ENTRAR A MULTIJUGADOR</button>
+    </div>
     <div class="controls-bar">
         <button class="btn btn-cyan" data-code="KeyW">⬆ W</button>
         <button class="btn btn-cyan" data-code="KeyA">⬅ A</button>
@@ -287,6 +297,25 @@ HTML_CLIENT = """<!DOCTYPE html>
     <script>
         const viewport = document.getElementById('viewport');
         viewport.focus();
+        viewport.addEventListener('dragstart', function(e) { e.preventDefault(); });
+
+        function quickPlay() {
+            sendInput('mousedown', 'MouseLeft', 640, 260);
+            setTimeout(function() { sendInput('mouseup', 'MouseLeft', 640, 260); }, 100);
+            setTimeout(function() {
+                sendInput('mousedown', 'MouseLeft', 640, 160);
+                setTimeout(function() { sendInput('mouseup', 'MouseLeft', 640, 160); }, 100);
+            }, 400);
+            setTimeout(function() {
+                sendInput('down', 'Enter');
+                setTimeout(function() { sendInput('up', 'Enter'); }, 100);
+            }, 800);
+        }
+
+        function quickOnline() {
+            sendInput('mousedown', 'MouseLeft', 640, 330);
+            setTimeout(function() { sendInput('mouseup', 'MouseLeft', 640, 330); }, 100);
+        }
 
         function sendInput(type, code, x, y) {
             let url = /input?type=&code=;

@@ -156,7 +156,18 @@ class Menu:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     quit_game()
-                if event.type == pg.KEYDOWN:
+                elif event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
+                    if len(self.word) == 0:
+                        self.word = "Scientist"
+                    if self.game.gamemode == "Freeplay":
+                        self.game.effect_sounds['main_menu_music'].stop()
+                        self.game.new()
+                        self.game.runfreeplay()
+                        return
+                    elif self.game.gamemode == "Multiplayer":
+                        self.game_input_address()
+                        return
+                elif event.type == pg.KEYDOWN:
                     if event.key == pg.K_ESCAPE:
                         self.game.effect_sounds['go_back'].play()
                         self.game_intro()
@@ -164,18 +175,16 @@ class Menu:
                         self.game.effect_sounds['backspace'].play()
                         self.word = self.word[:-1]
                     elif event.key == pg.K_RETURN:
-                        if len(self.word) > 0:   # if name is not nulls
-                            #self.game.missions_done = 1   # Reset mission count on game completion
-                            #self.game.invisible_play_count = 0
-                            if self.game.gamemode == "Freeplay":
-                                # stop main menu music before entering game
-                                self.game.effect_sounds['main_menu_music'].stop()
-                                self.game.new()
-                                self.game.runfreeplay()
-                                return
-                            elif self.game.gamemode == "Multiplayer":
-                                self.game_input_address()
-                                return
+                        if len(self.word) == 0:
+                            self.word = "Scientist"
+                        if self.game.gamemode == "Freeplay":
+                            self.game.effect_sounds['main_menu_music'].stop()
+                            self.game.new()
+                            self.game.runfreeplay()
+                            return
+                        elif self.game.gamemode == "Multiplayer":
+                            self.game_input_address()
+                            return
                     elif len(self.word) < self.word_count_name:
                         self.word += event.unicode
                         self.game.effect_sounds['keypress'].play()
@@ -265,6 +274,11 @@ class Menu:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     quit_game()
+                elif event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
+                    # Mouse click support for menus
+                    self.pos_y = event.pos[1]
+                    self.game.effect_sounds['selected'].play()
+                    return False
                 elif event.type == pg.KEYDOWN:
                     if event.key == pg.K_ESCAPE or event.key == pg.K_BACKSPACE:
                         self.game.effect_sounds['go_back'].play()
