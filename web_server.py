@@ -322,15 +322,7 @@ HTML_CLIENT = """<!DOCTYPE html>
             if (x !== undefined && y !== undefined) {
                 url += '&x=' + encodeURIComponent(x) + '&y=' + encodeURIComponent(y);
             }
-            try {
-                if (navigator.sendBeacon) {
-                    navigator.sendBeacon(url);
-                } else {
-                    fetch(url, {method: 'GET', keepalive: true});
-                }
-            } catch (err) {
-                fetch(url, {method: 'GET', keepalive: true});
-            }
+            fetch(url).catch(function() {});
         }
 
         // Global Keyboard Listeners
@@ -464,6 +456,9 @@ class WebGameHandler(BaseHTTPRequestHandler):
         else:
             self.send_response(404)
             self.end_headers()
+
+    def do_POST(self):
+        self.do_GET()
 
 
 def start_web_server(port=8080):

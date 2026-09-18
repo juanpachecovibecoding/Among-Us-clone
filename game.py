@@ -1061,11 +1061,11 @@ class Game:
         self.screen.blit(card_surface, (card_x, card_y))
 
         # Fonts
-        font_title = pg.font.Font(self.font, 20)
-        font_role = pg.font.Font(self.font, 42)
-        font_desc = pg.font.Font(self.font, 18)
-        font_body = pg.font.Font(self.font, 16)
-        font_hint = pg.font.Font(self.font, 14)
+        font_title = pg.font.Font(FONT, 20)
+        font_role = pg.font.Font(FONT, 42)
+        font_desc = pg.font.Font(FONT, 18)
+        font_body = pg.font.Font(FONT, 16)
+        font_hint = pg.font.Font(FONT, 14)
 
         if self.player.imposter:
             if getattr(self, 'saboteur_type', None) == "ROGUE_AI":
