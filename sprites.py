@@ -431,52 +431,83 @@ class Bot(pg.sprite.Sprite):
                 self.image = white_player_imgs_down[0]
                 self.dead_player_img = white_player_imgs_dead.convert_alpha()
         
+        color_map = {
+            "Red": (red_player_imgs_left, red_player_imgs_right),
+            "Blue": (blue_player_imgs_left, blue_player_imgs_right),
+            "Orange": (orange_player_imgs_left, orange_player_imgs_right),
+            "Yellow": (yellow_player_imgs_left, yellow_player_imgs_right),
+            "Green": (green_player_imgs_left, green_player_imgs_right),
+            "Black": (black_player_imgs_left, black_player_imgs_right),
+            "Brown": (brown_player_imgs_left, brown_player_imgs_right),
+            "Pink": (pink_player_imgs_left, pink_player_imgs_right),
+            "Purple": (purple_player_imgs_left, purple_player_imgs_right),
+            "White": (white_player_imgs_left, white_player_imgs_right),
+        }
+        self.bot_imgs_left, self.bot_imgs_right = color_map.get(bot_colour, (red_player_imgs_left, red_player_imgs_right))
+
         self.rect = self.image.get_rect()
         self.hit_rect = self.rect
-        self.vel = vec(0, 0)    # velocity init to zero
+        self.vel = vec(0, 0)
         self.pos = vec(x, y)
         self.type = bot_type
         self.play_kill_count = 0
-        
 
+        # Autonomous patrol variables for AI Lab staff agents
+        self.move_timer = pg.time.get_ticks()
+        self.change_dir_interval = random.randint(1500, 4000)
+        self.patrol_speed = random.randint(110, 160)
 
     def collide_with_walls(self, dir):
         if dir == 'x':
             hits = pg.sprite.spritecollide(self, self.game.walls, False)
             if hits:
-            # if hits with object on left or right side
-            # if we hit from right -- x is +ve for right direction
                 if self.vel.x > 0:
                     self.pos.x = hits[0].rect.left - self.rect.width
-            # if we hit from left -- x is -ve for left direction
                 if self.vel.x < 0:
                     self.pos.x = hits[0].rect.right
-            # regardless of which direction we hit vx = 0
                 self.vel.x = 0
                 self.rect.x = self.pos.x
+                self.change_dir_interval = 200
 
         if dir == 'y':
             hits = pg.sprite.spritecollide(self, self.game.walls, False)
-            # hit = item/object/sprite
-            # hits = hit collide with object/ walls/ spites / sprites group
             if hits:
-            # if hits with object on left or right side
-            # if we hit from right
                 if self.vel.y > 0:
                     self.pos.y = hits[0].rect.top - self.rect.height
-            # if we hit from left
                 if self.vel.y < 0:
                     self.pos.y = hits[0].rect.bottom
-            # regardless of which direction we hit vx = 0
                 self.vel.y = 0
                 self.rect.y = self.pos.y
-
+                self.change_dir_interval = 200
 
     def update(self):
-        # dt = delta time used for frame independent movements - Delta time (time since last tick)
+        if not self.alive_status:
+            self.vel = vec(0, 0)
+            return
+
+        now = pg.time.get_ticks()
+        if now - self.move_timer > self.change_dir_interval:
+            self.move_timer = now
+            self.change_dir_interval = random.randint(1800, 4500)
+            # 70% chance to roam around lab, 30% chance to stop and inspect a terminal
+            if random.random() < 0.70:
+                direction = random.choice([
+                    (1, 0), (-1, 0), (0, 1), (0, -1),
+                    (0.707, 0.707), (-0.707, 0.707), (0.707, -0.707), (-0.707, -0.707)
+                ])
+                self.vel = vec(direction[0] * self.patrol_speed, direction[1] * self.patrol_speed)
+                if direction[0] < 0 and len(self.bot_imgs_left) > 0:
+                    self.image = self.bot_imgs_left[0]
+                elif direction[0] > 0 and len(self.bot_imgs_right) > 0:
+                    self.image = self.bot_imgs_right[0]
+            else:
+                self.vel = vec(0, 0)
+
+        # Delta time independent movement
         self.pos += self.vel * self.game.dt
-        # 2 collision checks one for each axis x, y
-        self.rect.x = self.pos.x    # pos is a vector containing x, y coordinates
+
+        # Collision checks for x and y
+        self.rect.x = self.pos.x
         self.collide_with_walls('x')
         self.rect.y = self.pos.y
         self.collide_with_walls('y')

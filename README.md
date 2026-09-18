@@ -1,57 +1,73 @@
-# Among Us (clone)
-An unofficial clone of the popular multiplayer game 'Among Us', recreated in Python using various supported libraries. Support for upto 5 (or more?) players via LAN. Assets ripped from the from the game.
+# PROJECT: AIRGAP
+
+> **AI Lab Social Deduction & Containment Incident Game**  
+> An interactive social deduction game developed in Python, inspired by real-world sandbox breakout incidents and AI agent alignment safety research.
+
+In a frontier AI research laboratory, researchers are running containment protocols on autonomous agent swarms. An infiltration has compromised the facility: an **adversary** is attempting to sabotage the airgap and trigger a total infrastructure breach.
+
+The saboteur role is assigned randomly at start to one of two distinct archetypes:
+* **ROGUE A.I. (`ROGUE_AI`)**: An escaped autonomous model. Can traverse the facility through fiber-optic channels (`VENTS`), emits rapid EM glitch pulses to kill lights with reduced cooldown, and revokes researcher access.
+* **HUMAN INSIDER (`HUMAN_INSIDER`)**: A corrupted staff member working in collusion with the AI. Has full physical clearance to blend in among colleagues, but **cannot enter fiber ducts**. Must tamper with physical consoles and trigger overloads manually.
+
+Scientists win by completing all diagnostic and firewall security tasks (**Containment Level 100%**) or by voting out the saboteur during emergency debriefs.
+
+---
 
 ## Requirements
-* python 3.X 
-* pygame 
-* pytmx
-* pickle
-* select
-* socket
-* asyncore
-* threading
-* pyaudio (optional, for voice chat)
 
-## How to run
+* **Python 3.10+** (Tested and fully compatible with **Python 3.14+**)
+* `pygame-ce` (>= 2.5.0)
+* `pytmx` (>= 3.32)
+* Built-in standard libraries: `selectors`, `struct`, `socket`, `pickle`, `random`
 
-#### Singleplayer
-* To start the game `python main.py`
-* Choose 'Freeplay' from the menu to start playing
+Install all dependencies in one command:
+```bash
+pip install pygame-ce pytmx
+```
 
-#### Local Multiplayer
-* To start the game server for multiplayer support `python server.py`
-* To start the game client `python main.py`
-* Choose 'Local' from the menu
-* Enter IP Address of the server (displayed in the server console). If the server is running on the same machine as the game, use the address `127.0.0.1`.
-* Upto 5 (or more?) game clients can cannect to the server by entering the server address, if they are connected to the same network. Though, the server might crash if too many players are connected.
+---
 
-#### Voice Chat Support (experimental)
-* To start the voice chat server `python server_voice.py`
-* To start the voice chat client `python voice.py`
-* Enter IP Address and Port of the voice chat server (displayed in the server console). 
+## How to Run
 
-### Controls
+### Singleplayer (Lab Patrol Mode / Freeplay)
+```bash
+python main.py
+```
+* Choose **'Freeplay'** from the main menu.
+* Autonomous research agents patrol the facility.
+* Experience both the **Rogue A.I.** and **Human Insider** gameplay loops.
 
-#### Menu
-* `Up` `Down` `Left` `Right` `W` `S` `A` `D` Navigate Menu
-* `Enter` Select
-* `Esc` Back
+### Local Multiplayer (LAN / Airgap Network)
+1. **Start the dedicated server:**
+   ```bash
+   python server.py
+   ```
+   *(The server uses `selectors` event-loops and 4-byte TCP framing for robust, non-blocking packet delivery without disconnection bugs).*
 
-#### Game
-* `Up` `Down` `Left` `Right` `W` `S` `A` `D` Move
-* `Space` Interact, Perform Actions, Vent
-* `Left Click` View Tasks, Complete Tasks, Vote. 
-  * Click on the 'Tasks' button on the top-left to view the list of tasks. 
-  * When a task window is displayed, click on appropriate hotspots to complete the task. 
-  * During voting, click on the checkbox next to a player to vote.
-* `Tab` View Map
-* `Alt` Change Vent. 
-  * Stand next to a vent and interact with it to move inside. Once inside, move from vent to vent using the `Alt` button. 
-* `Enter` Kill
-* `Ctrl` Sabotage Lights
-  * To fix the lights, go the the Electrical room, stand close to the glowing-elctric-symbol circuit-box on the north wall of the room, and press `Ctrl`
-* `Shift` Sabotage Reactor
-  * To fix the reactor, go the the Reactor room, stand close to the glowing-hand-symbol hand-scanner on the north wall of the room, and press `Shift`
+2. **Start player clients:**
+   ```bash
+   python main.py
+   ```
+   * Choose **'Online' / 'Local'** from the menu.
+   * Enter the Server IP address shown on the server console (or `127.0.0.1` for localhost testing).
+
+---
+
+## Controls
+
+### Navigation & Actions
+* **Movement:** `W` `A` `S` `D` or Arrow Keys
+* **Interact / Use:** `Space`
+  * Complete laboratory tasks at terminals.
+  * *Rogue A.I. Only:* Enter / exit fiber-optic ducts (`Vents`).
+* **Data-Hop (Rogue A.I.):** `Alt` (while inside a fiber duct, jump between node terminals).
+* **Revoke Credentials (Saboteur):** `Enter` (when standing near a researcher).
+* **EM Glitch / Cut Lighting (Saboteur):** `Ctrl`
+  * To restore perimeter lights, researchers must navigate to the Power Grid room and press `Ctrl` at the circuit console.
+* **Overload GPU Cluster / Containment Meltdown (Saboteur):** `Shift`
+  * To stabilize the cluster, researchers must reach the Primary Node and press `Shift`.
+* **Facility Map:** `Tab`
+* **Emergency Debrief:** Walk to the central Cafeteria emergency terminal and press `Space`.
 
 ## Screenshots
 
