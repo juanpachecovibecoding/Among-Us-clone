@@ -318,11 +318,19 @@ HTML_CLIENT = """<!DOCTYPE html>
         }
 
         function sendInput(type, code, x, y) {
-            let url = /input?type=&code=;
+            var url = '/input?type=' + encodeURIComponent(type) + '&code=' + encodeURIComponent(code);
             if (x !== undefined && y !== undefined) {
-                url += &x=&y=;
+                url += '&x=' + encodeURIComponent(x) + '&y=' + encodeURIComponent(y);
             }
-            navigator.sendBeacon ? navigator.sendBeacon(url) : fetch(url, {method: 'GET', keepalive: true});
+            try {
+                if (navigator.sendBeacon) {
+                    navigator.sendBeacon(url);
+                } else {
+                    fetch(url, {method: 'GET', keepalive: true});
+                }
+            } catch (err) {
+                fetch(url, {method: 'GET', keepalive: true});
+            }
         }
 
         // Global Keyboard Listeners
