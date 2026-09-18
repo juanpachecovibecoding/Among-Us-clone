@@ -180,12 +180,16 @@ class Board:
 
     def draw_player_name(self, player_name, text_color, text_size):
         self.player_name_font = pg.font.Font(FONT, text_size)
-        text_surface  = self.player_name_font.render(player_name + " [SABOTEUR]",   True, text_color)
-        text_surface2 = self.player_name_font.render(player_name + " [RESEARCHER]", True, text_color)
         if self.game.player.imposter:
-            return text_surface
+            saboteur_type = getattr(self.game, 'saboteur_type', None)
+            if saboteur_type == "ROGUE_AI":
+                return self.player_name_font.render(player_name + " [ROGUE AI]", True, (255, 60, 60))
+            elif saboteur_type == "HUMAN_INSIDER":
+                return self.player_name_font.render(player_name + " [INSIDER]", True, (255, 145, 40))
+            else:
+                return self.player_name_font.render(player_name + " [SABOTEUR]", True, (255, 75, 75))
         else:
-            return text_surface2
+            return self.player_name_font.render(player_name + " [RESEARCHER]", True, (80, 200, 255))
 
     def draw_ejected_text(self, p):
         self.draw_text(self.surface, p + " — access credentials REVOKED", self.width/2, self.height/2, self.bonus_font)

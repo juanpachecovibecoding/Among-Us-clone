@@ -143,6 +143,15 @@ class Game:
         self.timer = pygame.time.get_ticks()
         self.timer_start = pygame.time.get_ticks()
 
+        # ── Dual Saboteur System ─────────────────────────────────────────────
+        # saboteur_type is None for Scientists, "ROGUE_AI" or "HUMAN_INSIDER"
+        # for the player assigned the imposter role.
+        # ROGUE_AI   → can use fiber-optic ducts (vents), EM pulse disables lights faster
+        # HUMAN_INSIDER → no vents, can forge logs (cafeteria computer), slower breach
+        self.saboteur_type = None
+        self.role_reveal_timer = 0       # ms since role was revealed
+        self.ROLE_REVEAL_DURATION = 5000  # show role card for 5 seconds
+
         self.player_pos = [(3288, 873), (3046, 791), (3046, 651), (3563, 653), (3563, 762), (2968, 530), (3566, 553)]
         # Vent Locations
         self.vent = [(3898, 791), (5309, 1144), (5309, 1525), (4513, 1525), (4531, 2459), (3694, 1942), (2220, 1711),
@@ -1038,8 +1047,96 @@ class Game:
         self.map_img.blit(text_surface, text_rect)
 
     def display_imposter_among_us(self):
-        self.imposter_among_us_img = pg.transform.smoothscale(self.imposter_among_us_img, (WIDTH, HEIGHT))
-        self.screen.blit(self.imposter_among_us_img, (0, 0))
+        # 1. Semi-transparent backdrop overlay
+        backdrop = pg.Surface((WIDTH, HEIGHT), pg.SRCALPHA)
+        backdrop.fill((5, 10, 20, 230))
+        self.screen.blit(backdrop, (0, 0))
+
+        # 2. Dimensions and coordinates for the briefing card
+        card_w, card_h = 920, 480
+        card_x, card_y = (WIDTH - card_w) // 2, (HEIGHT - card_h) // 2
+
+        card_surface = pg.Surface((card_w, card_h), pg.SRCALPHA)
+        card_surface.fill((15, 23, 42, 240))
+        self.screen.blit(card_surface, (card_x, card_y))
+
+        # Fonts
+        font_title = pg.font.Font(self.font, 20)
+        font_role = pg.font.Font(self.font, 42)
+        font_desc = pg.font.Font(self.font, 18)
+        font_body = pg.font.Font(self.font, 16)
+        font_hint = pg.font.Font(self.font, 14)
+
+        if self.player.imposter:
+            if getattr(self, 'saboteur_type', None) == "ROGUE_AI":
+                primary_color = (255, 50, 80)     # Neon Red
+                accent_color  = (0, 240, 255)     # Cyan
+                badge_text    = "THREAT LEVEL: CRITICAL // UNCONTAINED ENTITY"
+                role_text     = "ROGUE A.I. [ANOMALOUS AGENT]"
+                sub_text      = "Autonomous intelligence breaking free of the sandbox."
+                lines = [
+                    ("[+] DATA-HOP (FIBER DUCTS):", "Press SPACE near ducts to hide, ALT to data-hop across the lab.", accent_color),
+                    ("[+] EM OVERLOAD:", "Press CTRL (Kill Lighting - 10s cooldown) or SHIFT (Trigger Meltdown).", primary_color),
+                    ("[+] PROTOCOL PURGE:", "Press ENTER near scientists to revoke their access credentials permanently.", (255, 200, 50)),
+                    ("[*] MISSION OBJECTIVE:", "Force 100% Containment Failure or isolate the researchers.", (255, 255, 255)),
+                ]
+            else:
+                primary_color = (255, 140, 20)    # Warning Orange
+                accent_color  = (255, 220, 80)    # Amber Yellow
+                badge_text    = "SECURITY BREACH // INTERNAL COLLUSION DETECTED"
+                role_text     = "HUMAN INSIDER [CORRUPTED STAFF]"
+                sub_text      = "Staff researcher subverting containment protocols from within."
+                lines = [
+                    ("[+] BLEND IN (NO DUCTS):", "You walk physically among colleagues. You CANNOT use fiber ducts.", primary_color),
+                    ("[+] MANUAL SABOTAGE:", "Press CTRL (Power Grid - 15s cooldown) or SHIFT (Cooling Systems).", accent_color),
+                    ("[+] BADGE REVOCATION:", "Press ENTER near colleagues to revoke their security clearance.", (255, 200, 50)),
+                    ("[*] MISSION OBJECTIVE:", "Facilitate AI escape without being exposed in debrief meetings!", (255, 255, 255)),
+                ]
+        else:
+            primary_color = (0, 210, 255)         # Electric Blue
+            accent_color  = (80, 250, 150)        # Green
+            badge_text    = "FACILITY DEFENSE PROTOCOL // ACTIVE MONITORING"
+            role_text     = "RESEARCH SCIENTIST [SECURITY TEAM]"
+            sub_text      = "Runaway model attempting infrastructure escape across server clusters."
+            lines = [
+                ("[+] CONTAINMENT TASKS:", "Complete diagnostic and firewall tasks to raise Containment Level to 100%.", accent_color),
+                ("[+] DEBRIEF MEETINGS:", "Call emergency debriefs in Cafeteria or report incidents to vote & revoke access.", primary_color),
+                ("[+] SURVEILLANCE:", "Watch for anomalous movement, power surges, or duct manipulation.", (255, 200, 50)),
+                ("[*] MISSION OBJECTIVE:", "Quarantine the infiltrator (Rogue AI or Insider) before total escape.", (255, 255, 255)),
+            ]
+
+        # Draw glowing card borders
+        pg.draw.rect(self.screen, primary_color, (card_x, card_y, card_w, card_h), 3, border_radius=8)
+        pg.draw.rect(self.screen, (primary_color[0]//3, primary_color[1]//3, primary_color[2]//3),
+                     (card_x - 4, card_y - 4, card_w + 8, card_h + 8), 1, border_radius=10)
+
+        # Header Badge
+        badge_surf = font_title.render(f"PROJECT: AIRGAP — {badge_text}", True, primary_color)
+        self.screen.blit(badge_surf, (card_x + 30, card_y + 25))
+
+        # Role Title
+        role_surf = font_role.render(role_text, True, (255, 255, 255))
+        self.screen.blit(role_surf, (card_x + 30, card_y + 55))
+
+        # Subtitle
+        sub_surf = font_desc.render(sub_text, True, (180, 200, 220))
+        self.screen.blit(sub_surf, (card_x + 30, card_y + 115))
+
+        # Separator Line
+        pg.draw.line(self.screen, primary_color, (card_x + 30, card_y + 148), (card_x + card_w - 30, card_y + 148), 2)
+
+        # Body Lines
+        line_y = card_y + 168
+        for title_line, desc_line, tag_col in lines:
+            t_surf = font_body.render(title_line, True, tag_col)
+            d_surf = font_body.render(desc_line, True, (220, 230, 240))
+            self.screen.blit(t_surf, (card_x + 35, line_y))
+            self.screen.blit(d_surf, (card_x + 35, line_y + 22))
+            line_y += 54
+
+        # Footer Hint
+        hint_surf = font_hint.render("INITIALIZING NEURAL SANDBOX... [SPACE / ANY KEY TO PROCEED]", True, (140, 160, 180))
+        self.screen.blit(hint_surf, (card_x + 35, card_y + card_h - 32))
 
     # THIS METHOD RUNS THE GAME AND ITS MAIN FUNCTIONS IN LOOP
 
@@ -1053,13 +1150,15 @@ class Game:
 
         self.playing = True
         self.player.imposter = True
+        self.saboteur_type = random.choice(["ROGUE_AI", "HUMAN_INSIDER"])
 
         for b in self.bots:
             if b.bot_colour == self.player_colour:
                 b.kill()
                 break
 
-        self.imposter_among_us_status = False
+        self.imposter_among_us_status = True
+        self.role_reveal_start = pygame.time.get_ticks()
 
         self.timer_start = pygame.time.get_ticks()
         self.killcooldown_start = pygame.time.get_ticks()
@@ -1085,6 +1184,10 @@ class Game:
             self.timer = pygame.time.get_ticks()
             self.seconds = (pg.time.get_ticks() - self.start_ticks) / 1000
             self.sabotage_timer_visible_status = True
+
+            if self.imposter_among_us_status and hasattr(self, 'role_reveal_start'):
+                if (self.timer - self.role_reveal_start) > 4500:
+                    self.imposter_among_us_status = False
 
             # If missions are completed then win or loss display
             # For crew mate
@@ -1442,12 +1545,17 @@ class Game:
                             if p[0] > self.player_highest_id:
                                 self.player_highest_id = p[0]
                             if self.player.player_id > self.player_highest_id and self.player.imposter == False:
-                                print("yes")
+                                print("Assigned Saboteur role")
                                 self.player_highest_id = self.player.player_id
                                 self.player.imposter = True
+                                if self.saboteur_type is None:
+                                    self.saboteur_type = random.choice(["ROGUE_AI", "HUMAN_INSIDER"])
+                                    self.imposter_among_us_status = True
+                                    self.role_reveal_start = pygame.time.get_ticks()
                             elif self.player.player_id < self.player_highest_id and self.player.imposter == True:
-                                print("no")
+                                print("Assigned Researcher role")
                                 self.player.imposter = False
+                                self.saboteur_type = None
 
             # now after receiving data from the server, time to send data to the server
             # update local player object in the list
@@ -1591,7 +1699,8 @@ class Game:
             if hit.type == 'vent':
                 keys = pg.key.get_pressed()
                 if keys[pg.K_SPACE]:
-                    if self.invisible_play_count == 0 and self.player.imposter == True and self.player.alive_status == True and (
+                    # Only ROGUE_AI can access fiber-optic ducts (vents)
+                    if self.invisible_play_count == 0 and self.player.imposter == True and getattr(self, 'saboteur_type', None) == "ROGUE_AI" and self.player.alive_status == True and (
                             self.ventcooldown - self.ventcooldown_start) > 500 and self.emergency == False:
                         self.player.image = self.invsible_player_image
                         self.player.sync_img = "self.invsible_player_image"
@@ -1599,7 +1708,6 @@ class Game:
                         self.effect_sounds['vent'].play()
                         self.invisible_play_count = 1
                         self.ventcooldown_start = pygame.time.get_ticks()
-                        # self.invisibility_sound_playing = True
                     elif self.invisible_play_count == 1 and (self.ventcooldown - self.ventcooldown_start) > 500:
                         self.player.image = self.player.player_imgs_down[0]
                         self.player.sync_img = "self.player.player_imgs_down"
@@ -1610,7 +1718,7 @@ class Game:
 
                 if keys[pg.K_LALT] or keys[pg.K_RALT]:
                     if (
-                            self.ventcooldown - self.ventcooldown_start) > 750 and self.invisible_play_count == 1 and self.player.imposter == True:
+                            self.ventcooldown - self.ventcooldown_start) > 750 and self.invisible_play_count == 1 and self.player.imposter == True and getattr(self, 'saboteur_type', None) == "ROGUE_AI":
                         self.player.pos = vec(random.choice(self.vent))
                         self.effect_sounds['invisible'].play()
                         self.ventcooldown_start = self.ventcooldown
@@ -2729,6 +2837,10 @@ class Game:
 
 
             if event.type == pg.KEYDOWN:
+                # Press any key to dismiss role briefing card
+                if self.imposter_among_us_status:
+                    self.imposter_among_us_status = False
+
                 # Create a toggle key for debugging collision
                 # if key is H and game is not paused
                 if event.key == pg.K_h and not self.paused:
@@ -2739,7 +2851,9 @@ class Game:
 
                     c = pygame.Vector2(2472, 1721)
                     d = pygame.Vector2(self.player.pos.x, self.player.pos.y)
-                    if (self.sabotagecooldown - self.sabotagecooldown_start) > 15000 and self.night == False and self.night_reactor == False and self.player.imposter == True:
+                    # ROGUE_AI has 10s EM glitch cooldown, HUMAN_INSIDER has standard 15s cooldown
+                    sabotage_cd_threshold = 10000 if getattr(self, 'saboteur_type', None) == "ROGUE_AI" else 15000
+                    if (self.sabotagecooldown - self.sabotagecooldown_start) > sabotage_cd_threshold and self.night == False and self.night_reactor == False and self.player.imposter == True:
                         self.night = True
                         self.night_sync += 1
                         self.light_bulb_timer_icon_status = False
